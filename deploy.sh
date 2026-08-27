@@ -17,10 +17,16 @@ set +a
 : "${HULY_GIT_BRANCH:?HULY_GIT_BRANCH is required}"
 : "${HULY_SOURCE_DIR:?HULY_SOURCE_DIR is required}"
 : "${HOST_ADDRESS:?HOST_ADDRESS is required}"
+: "${EXTERNAL_MINIO_NETWORK:?EXTERNAL_MINIO_NETWORK is required}"
 : "${EXTERNAL_MINIO_ENDPOINT:?EXTERNAL_MINIO_ENDPOINT is required}"
 : "${EXTERNAL_MINIO_URL:?EXTERNAL_MINIO_URL is required}"
 : "${EXTERNAL_MINIO_ACCESS_KEY:?EXTERNAL_MINIO_ACCESS_KEY is required}"
 : "${EXTERNAL_MINIO_SECRET_KEY:?EXTERNAL_MINIO_SECRET_KEY is required}"
+
+if ! docker network inspect "$EXTERNAL_MINIO_NETWORK" >/dev/null 2>&1; then
+  echo "External MinIO Docker network not found: $EXTERNAL_MINIO_NETWORK" >&2
+  exit 1
+fi
 
 case "$(node -p 'process.versions.node.split(`.`)[0]' 2>/dev/null || true)" in
   22) ;;

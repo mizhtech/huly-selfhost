@@ -156,6 +156,9 @@ services:
 
   workspace:
     <<: *huly-service
+    networks:
+      - huly_net
+      - external_minio_net
     image: hardcoreeng/workspace
     environment:
       - WS_OPERATION=all+backup
@@ -295,6 +298,9 @@ services:
 
   datalake:
     <<: *huly-service
+    networks:
+      - huly_net
+      - external_minio_net
     image: hardcoreeng/datalake
     environment:
       - PORT=4030
@@ -315,6 +321,9 @@ services:
 
   hulylake:
     <<: *huly-service
+    networks:
+      - huly_net
+      - external_minio_net
     image: hardcoreeng/hulylake
     environment:
       - HULY_TOKEN_SECRET=${SECRET}
@@ -350,3 +359,6 @@ volumes:
 
 networks:
   huly_net:
+  external_minio_net:
+    external: true
+    name: ${EXTERNAL_MINIO_NETWORK}
