@@ -25,7 +25,10 @@ services:
       - stream
     restart: unless-stopped
     networks:
-      - huly_net
+      huly_net:
+      gateway_net:
+        aliases:
+          - huly-gateway
 
   cockroach:
     image: cockroachdb/cockroach:latest-v24.3
@@ -348,3 +351,6 @@ networks:
   external_minio_net:
     external: true
     name: ${EXTERNAL_MINIO_NETWORK}
+  gateway_net:
+    external: true
+    name: ${GATEWAY_NETWORK}

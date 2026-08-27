@@ -28,9 +28,17 @@ set +a
 : "${EXTERNAL_MINIO_URL:?EXTERNAL_MINIO_URL is required}"
 : "${EXTERNAL_MINIO_ACCESS_KEY:?EXTERNAL_MINIO_ACCESS_KEY is required}"
 : "${EXTERNAL_MINIO_SECRET_KEY:?EXTERNAL_MINIO_SECRET_KEY is required}"
+: "${GATEWAY_NETWORK:?GATEWAY_NETWORK is required}"
+: "${GATEWAY_CONTAINER:?GATEWAY_CONTAINER is required}"
+: "${GATEWAY_CONFIG_DIR:?GATEWAY_CONFIG_DIR is required}"
 
 if ! docker network inspect "$EXTERNAL_MINIO_NETWORK" >/dev/null 2>&1; then
   echo "External MinIO Docker network not found: $EXTERNAL_MINIO_NETWORK" >&2
+  exit 1
+fi
+
+if ! docker network inspect "$GATEWAY_NETWORK" >/dev/null 2>&1; then
+  echo "Central gateway Docker network not found: $GATEWAY_NETWORK" >&2
   exit 1
 fi
 
@@ -66,6 +74,8 @@ echo "Building Huly fork from $(git -C "$SOURCE_DIR" rev-parse --short HEAD)"
 # here; compose.yml uses pull_policy: never for those services.
 docker compose --env-file "$CONFIG_FILE" -f compose.yml config >/dev/null
 docker compose --env-file "$CONFIG_FILE" -f compose.yml up -d --force-recreate
+
+./nginx.sh
 
 echo "Huly started on http://${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}"
 echo "Public URL: http${SECURE:+s}://${HOST_ADDRESS}"

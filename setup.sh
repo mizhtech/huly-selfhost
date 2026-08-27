@@ -282,8 +282,7 @@ else
     esac
 fi
 
-echo -e "\033[1;32mSetup is complete!\n Generating nginx.conf...\033[0m"
-./nginx.sh
+echo -e "\033[1;32mSetup is complete!\033[0m"
 
 if [ "$QUICK" == true ]; then
     echo ""
