@@ -336,20 +336,6 @@ services:
       cockroach:
         condition: service_started
 
-  time-machine:
-    <<: *huly-service
-    image: hardcoreeng/worker
-    environment:
-      - DB_URL=${CR_DB_URL}
-      - QUEUE_CONFIG=redpanda:9092
-      - QUEUE_REGION=cockroach
-    depends_on:
-      cockroach:
-        condition: service_started
-      redpanda:
-        condition: service_healthy
-      account:
-        condition: service_started
 
 volumes:
   cr_data:

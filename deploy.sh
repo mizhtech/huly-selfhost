@@ -17,6 +17,12 @@ set +a
 : "${HULY_GIT_BRANCH:?HULY_GIT_BRANCH is required}"
 : "${HULY_SOURCE_DIR:?HULY_SOURCE_DIR is required}"
 : "${HOST_ADDRESS:?HOST_ADDRESS is required}"
+: "${DOCKER_NAME:?DOCKER_NAME is required}"
+: "${CR_DATABASE:?CR_DATABASE is required}"
+: "${CR_USERNAME:?CR_USERNAME is required}"
+: "${CR_USER_PASSWORD:?CR_USER_PASSWORD is required}"
+: "${CR_DB_URL:?CR_DB_URL is required}"
+: "${SECRET:?SECRET is required}"
 : "${EXTERNAL_MINIO_NETWORK:?EXTERNAL_MINIO_NETWORK is required}"
 : "${EXTERNAL_MINIO_ENDPOINT:?EXTERNAL_MINIO_ENDPOINT is required}"
 : "${EXTERNAL_MINIO_URL:?EXTERNAL_MINIO_URL is required}"
@@ -58,8 +64,8 @@ echo "Building Huly fork from $(git -C "$SOURCE_DIR" rev-parse --short HEAD)"
 
 # Application images must come from the local fork build. Do not pull hardcoreeng/*
 # here; compose.yml uses pull_policy: never for those services.
-docker compose -f compose.yml config >/dev/null
-docker compose -f compose.yml up -d --force-recreate
+docker compose --env-file "$CONFIG_FILE" -f compose.yml config >/dev/null
+docker compose --env-file "$CONFIG_FILE" -f compose.yml up -d --force-recreate
 
 echo "Huly started on http://${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}"
 echo "Public URL: http${SECURE:+s}://${HOST_ADDRESS}"
