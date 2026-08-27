@@ -965,3 +965,92 @@ After the service is running:
 
 > **Note**  
 > Notification settings are user-specific. Each user must configure Telegram notifications individually.
+
+## Production deployment from the MizhTech fork
+
+This repository is configured to deploy the customized Huly Platform fork on Ubuntu 24.04 LTS.
+
+### Runtime profile
+
+The production compose file mirrors the active service profile of:
+
+```bash
+rush docker:up:min:external-minio
+```
+
+Optional services disabled by the minified profile (Elasticsearch/fulltext, stats, print, sign, HulyPulse, process, backup API, rating, and related services) are not started. Object storage is provided by an existing external MinIO instance.
+
+### Source and build
+
+The deployment does not pull `hardcoreeng/*` application images from Docker Hub. `./deploy.sh` clones or updates:
+
+```text
+https://github.com/mizhtech/huly-platform.git
+```
+
+using branch:
+
+```text
+dev-v0.7.426
+```
+
+and runs the repository-pinned Rush version:
+
+```bash
+node common/scripts/install-run-rush.js update
+node common/scripts/install-run-rush.js docker:min
+```
+
+The compose file uses `pull_policy: never` for `hardcoreeng/*` services, so a missing local image fails deployment instead of silently running an upstream image.
+
+### Production URL and Nginx
+
+Default production values are:
+
+```text
+HOST_ADDRESS=erp.qtmienbac.vn
+SECURE=true
+HTTP_BIND=127.0.0.1
+HTTP_PORT=8087
+```
+
+Docker publishes only the internal Huly gateway to `127.0.0.1:8087`. Host Nginx terminates TLS for `https://erp.qtmienbac.vn` and proxies to that loopback endpoint.
+
+Generate/update the host Nginx configuration with:
+
+```bash
+./nginx.sh --recreate
+```
+
+Add the SSL certificate directives required by your server before reloading Nginx.
+
+### External MinIO
+
+Set these values in `huly_v7.conf`:
+
+```text
+EXTERNAL_MINIO_ENDPOINT=minio.internal:9000
+EXTERNAL_MINIO_URL=http://minio.internal:9000
+EXTERNAL_MINIO_ACCESS_KEY=...
+EXTERNAL_MINIO_SECRET_KEY=...
+EXTERNAL_MINIO_REGION=local
+BACKUP_BUCKET_NAME=huly-backups
+```
+
+`EXTERNAL_MINIO_URL` must be reachable from containers on the Huly Docker network. Prefer an internal DNS name or stable private address on Ubuntu rather than a public Internet endpoint.
+
+### Deploy
+
+Run setup once to generate secrets and `huly_v7.conf`:
+
+```bash
+./setup.sh
+```
+
+Subsequent deployments or upgrades can be performed with:
+
+```bash
+./deploy.sh
+```
+
+The deployment script performs a fast-forward-only Git update before rebuilding, so unexpected source divergence stops the deployment rather than overwriting local changes.

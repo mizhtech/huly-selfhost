@@ -49,9 +49,9 @@ fi
 # Quick mode: use all defaults, skip prompts
 if [ "$QUICK" == true ]; then
     echo -e "\033[1;34m🚀 Quick setup mode - using defaults for fast verification\033[0m"
-    _HOST_ADDRESS="localhost:8087"
+    _HOST_ADDRESS="your-domain.com"
     _HTTP_PORT="8087"
-    _SECURE=""
+    _SECURE="true"
     _VOLUME_ELASTIC_PATH=""
     _VOLUME_FILES_PATH=""
     _VOLUME_CR_DATA_PATH=""
@@ -69,10 +69,10 @@ while true; do
         prompt_value="${HOST_ADDRESS}"
     else
         prompt_type="default"
-        prompt_value="localhost"
+        prompt_value="your-domain.com"
     fi
     read -p "Enter the host address (domain name or IP) [${prompt_type}: ${prompt_value}]: " input
-    _HOST_ADDRESS="${input:-${HOST_ADDRESS:-localhost}}"
+    _HOST_ADDRESS="${input:-${HOST_ADDRESS:-your-domain.com}}"
     break
 done
 
@@ -82,10 +82,10 @@ while true; do
         prompt_value="${HTTP_PORT}"
     else
         prompt_type="default"
-        prompt_value="80"
+        prompt_value="8087"
     fi
     read -p "Enter the port for HTTP [${prompt_type}: ${prompt_value}]: " input
-    _HTTP_PORT="${input:-${HTTP_PORT:-80}}"
+    _HTTP_PORT="${input:-${HTTP_PORT:-8087}}"
     if [[ "$_HTTP_PORT" =~ ^[0-9]+$ && "$_HTTP_PORT" -ge 1 && "$_HTTP_PORT" -le 65535 ]]; then
         break
     else
@@ -215,10 +215,23 @@ fi
 export HOST_ADDRESS=$_HOST_ADDRESS
 export SECURE=$_SECURE
 export HTTP_PORT=$_HTTP_PORT
-export HTTP_BIND=$HTTP_BIND
+export HTTP_BIND=${HTTP_BIND:-127.0.0.1}
+export SSL_CERTIFICATE=${SSL_CERTIFICATE:-/apps/certs/your-domain.com/fullchain.pem}
+export SSL_CERTIFICATE_KEY=${SSL_CERTIFICATE_KEY:-/apps/certs/your-domain.com/privkey.pem}
+export DOCKER_NAME=${DOCKER_NAME:-Huly}
 export TITLE=${TITLE:-Huly}
-export DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
+export DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-vi}
 export LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
+export HULY_GIT_REPOSITORY=${HULY_GIT_REPOSITORY:-https://github.com/mizhtech/huly-platform.git}
+export HULY_GIT_BRANCH=${HULY_GIT_BRANCH:-dev-v0.7.426}
+export HULY_SOURCE_DIR=${HULY_SOURCE_DIR:-./source/huly-platform}
+export PLATFORM_ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS:-admin}
+export EXTERNAL_MINIO_ENDPOINT=${EXTERNAL_MINIO_ENDPOINT:-}
+export EXTERNAL_MINIO_URL=${EXTERNAL_MINIO_URL:-}
+export EXTERNAL_MINIO_ACCESS_KEY=${EXTERNAL_MINIO_ACCESS_KEY:-}
+export EXTERNAL_MINIO_SECRET_KEY=${EXTERNAL_MINIO_SECRET_KEY:-}
+export EXTERNAL_MINIO_REGION=${EXTERNAL_MINIO_REGION:-local}
+export BACKUP_BUCKET_NAME=${BACKUP_BUCKET_NAME:-huly-backups}
 export CR_DATABASE=${CR_DATABASE:-defaultdb}
 export CR_USERNAME=${CR_USERNAME:-selfhost}
 export REDPANDA_ADMIN_USER=${REDPANDA_ADMIN_USER:-superadmin}
@@ -239,6 +252,8 @@ export CR_DB_URL=$CR_DB_URL
 echo -e "\n\033[1;34mConfiguration Summary:\033[0m"
 echo -e "Host Address: \033[1;32m$_HOST_ADDRESS\033[0m"
 echo -e "HTTP Port: \033[1;32m$_HTTP_PORT\033[0m"
+echo -e "SSL Certificate: \033[1;32m$SSL_CERTIFICATE\033[0m"
+echo -e "SSL Certificate Key: \033[1;32m$SSL_CERTIFICATE_KEY\033[0m"
 if [[ -n "$SECURE" ]]; then
     echo -e "SSL Enabled: \033[1;32mYes\033[0m"
 else
@@ -251,17 +266,17 @@ echo -e "CockroachDB Certs Volume: \033[1;32m${_VOLUME_CR_CERTS_PATH:-Docker nam
 echo -e "Redpanda Volume: \033[1;32m${_VOLUME_REDPANDA_PATH:-Docker named volume}\033[0m"
 
 if [ "$QUICK" == true ]; then
-    echo -e "\033[1;32mRunning 'docker compose up -d' now...\033[0m"
-    docker compose up -d
+    echo -e "\033[1;32mRunning './deploy.sh' now...\033[0m"
+    ./deploy.sh
 else
-    read -p "Do you want to run 'docker compose up -d' now to start Huly? (Y/n): " RUN_DOCKER
+    read -p "Do you want to build the fork and start Huly now? (Y/n): " RUN_DOCKER
     case "${RUN_DOCKER:-Y}" in
         [Yy]* )
-             echo -e "\033[1;32mRunning 'docker compose up -d' now...\033[0m"
-             docker compose up -d
+             echo -e "\033[1;32mRunning './deploy.sh' now...\033[0m"
+             ./deploy.sh
              ;;
         [Nn]* )
-            echo "You can run 'docker compose up -d' later to start Huly."
+            echo "You can run ./deploy.sh later."
             ;;
     esac
 fi
@@ -275,7 +290,7 @@ if [ "$QUICK" == true ]; then
     echo -e "\033[1;32m✅ Quick setup complete!\033[0m"
     echo -e "\033[1;34m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo ""
-    echo -e "🌐 Access Huly at: \033[1;36mhttp://localhost:8087\033[0m"
+    echo -e "🌐 Access Huly at: \033[1;36mhttps://your-domain.com\033[0m"
     echo ""
     echo -e "⏳ Wait ~60 seconds for all services to initialize..."
     echo -e "📊 Check status with: \033[1;33mdocker compose ps\033[0m"
