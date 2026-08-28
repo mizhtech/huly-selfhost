@@ -139,7 +139,8 @@ services:
       - ACCOUNT_PORT=3000
       - QUEUE_CONFIG=redpanda:9092
       - SERVER_SECRET=${SECRET}
-      - ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS:-admin}
+      - ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS}
+      - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - WORKSPACE_LIMIT_PER_USER=10000
       - DB_URL=${CR_DB_URL}
       - REGION_INFO=cockroach|CockroachDB
@@ -206,6 +207,7 @@ services:
     environment:
       - SERVER_PORT=8080
       - SERVER_SECRET=${SECRET}
+      - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
       - ACCOUNTS_URL=http${SECURE:+s}://${HOST_ADDRESS}/_accounts
       - ACCOUNTS_URL_INTERNAL=http://account:3000
       - FILES_URL=http${SECURE:+s}://${HOST_ADDRESS}/_datalake/blob/:workspace/:blobId/:filename
