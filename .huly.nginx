@@ -3,6 +3,15 @@ server {
     server_name _;
     client_max_body_size 100M;
 
+    # Huly UI branding is fetched from /branding.json.
+    # Generate the host-specific branding response dynamically so self-hosted
+    # deployments do not need to commit a production domain into the repo.
+    location = /branding.json {
+        default_type application/json;
+        add_header Cache-Control "no-store";
+        return 200 '{"$host":{"languages":"en,vi","defaultLanguage":"vi"}}';
+    }
+
     location / {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
