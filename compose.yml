@@ -132,6 +132,17 @@ services:
       - account
       - redpanda
 
+  mail:
+    <<: *huly-service
+    image: hardcoreeng/mail
+    environment:
+      - PORT=8097
+      - SOURCE=${SMTP_FROM}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+
   account:
     <<: *huly-service
     image: hardcoreeng/account
@@ -145,7 +156,7 @@ services:
       - DB_URL=${CR_DB_URL}
       - REGION_INFO=cockroach|CockroachDB
       - TRANSACTOR_URL=ws://transactor:3332;ws${SECURE:+s}://${HOST_ADDRESS}/_transactor
-      - MAIL_URL=
+      - MAIL_URL=http://mail:8097
       - STORAGE_CONFIG=datalake|http://datalake:4030
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
       - LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
@@ -157,6 +168,8 @@ services:
         condition: service_started
       redpanda:
         condition: service_healthy
+      mail:
+        condition: service_started
 
   workspace:
     <<: *huly-service
@@ -267,7 +280,7 @@ services:
       - METRICS_CONSOLE=false
       - STORAGE_CONFIG=datalake|http://datalake:4030
       - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
-      - MAIL_URL=
+      - MAIL_URL=http://mail:8097
       - ACCOUNTS_URL=http://account:3000
       - LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
       - COMMUNICATION_TIME_LOGGING_ENABLED=true
@@ -285,6 +298,8 @@ services:
       account:
         condition: service_started
       datalake:
+        condition: service_started
+      mail:
         condition: service_started
 
   rekoni:

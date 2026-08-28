@@ -23,6 +23,11 @@ set +a
 : "${CR_USER_PASSWORD:?CR_USER_PASSWORD is required}"
 : "${CR_DB_URL:?CR_DB_URL is required}"
 : "${SECRET:?SECRET is required}"
+: "${SMTP_FROM:?SMTP_FROM is required}"
+: "${SMTP_HOST:?SMTP_HOST is required}"
+: "${SMTP_PORT:?SMTP_PORT is required}"
+: "${SMTP_USERNAME:?SMTP_USERNAME is required}"
+: "${SMTP_PASSWORD:?SMTP_PASSWORD is required}"
 : "${EXTERNAL_MINIO_NETWORK:?EXTERNAL_MINIO_NETWORK is required}"
 : "${EXTERNAL_MINIO_ENDPOINT:?EXTERNAL_MINIO_ENDPOINT is required}"
 : "${EXTERNAL_MINIO_URL:?EXTERNAL_MINIO_URL is required}"
@@ -116,6 +121,8 @@ echo "Building Huly fork from $(git -C "$SOURCE_DIR" rev-parse --short HEAD)"
   cd "$SOURCE_DIR"
   node common/scripts/install-run-rush.js update
   node common/scripts/install-run-rush.js docker:min
+  # The minified build excludes pod-mail; this deployment enables outbound SMTP.
+  node common/scripts/install-run-rush.js docker:build --to @hcengineering/pod-mail
 )
 
 # Application images must come from the local fork build. Do not pull hardcoreeng/*
