@@ -32,6 +32,16 @@ set +a
 : "${GATEWAY_CONTAINER:?GATEWAY_CONTAINER is required}"
 : "${GATEWAY_CONFIG_DIR:?GATEWAY_CONFIG_DIR is required}"
 
+CR_DATA_VOLUME_NAME="${CR_DATA_VOLUME_NAME:-huly_cr_data}"
+CR_CERTS_VOLUME_NAME="${CR_CERTS_VOLUME_NAME:-huly_cr_certs}"
+REDPANDA_VOLUME_NAME="${REDPANDA_VOLUME_NAME:-huly_redpanda}"
+TELEMETRY_VOLUME_NAME="${TELEMETRY_VOLUME_NAME:-huly_telemetry}"
+
+export CR_DATA_VOLUME_NAME
+export CR_CERTS_VOLUME_NAME
+export REDPANDA_VOLUME_NAME
+export TELEMETRY_VOLUME_NAME
+
 if ! docker network inspect "$EXTERNAL_MINIO_NETWORK" >/dev/null 2>&1; then
   echo "External MinIO Docker network not found: $EXTERNAL_MINIO_NETWORK" >&2
   exit 1
@@ -41,6 +51,17 @@ if ! docker network inspect "$GATEWAY_NETWORK" >/dev/null 2>&1; then
   echo "Central gateway Docker network not found: $GATEWAY_NETWORK" >&2
   exit 1
 fi
+
+for volume in \
+  "$CR_DATA_VOLUME_NAME" \
+  "$CR_CERTS_VOLUME_NAME" \
+  "$REDPANDA_VOLUME_NAME" \
+  "$TELEMETRY_VOLUME_NAME"; do
+  if ! docker volume inspect "$volume" >/dev/null 2>&1; then
+    echo "Creating protected external volume: $volume"
+    docker volume create "$volume" >/dev/null
+  fi
+done
 
 case "$(node -p 'process.versions.node.split(`.`)[0]' 2>/dev/null || true)" in
   22) ;;
