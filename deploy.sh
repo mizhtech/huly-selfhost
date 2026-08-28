@@ -64,6 +64,32 @@ for path in \
   mkdir -p "$path"
 done
 
+ensure_path_owner() {
+  local path="$1"
+  local uid="$2"
+  local gid="$3"
+  local current_owner
+
+  current_owner="$(stat -c '%u:%g' "$path")"
+  if [[ "$current_owner" == "$uid:$gid" ]]; then
+    return
+  fi
+
+  echo "Setting ownership for $path to $uid:$gid..."
+  if [[ "$(id -u)" -eq 0 ]]; then
+    chown -R "$uid:$gid" "$path"
+  elif command -v sudo >/dev/null 2>&1; then
+    sudo chown -R "$uid:$gid" "$path"
+  else
+    echo "Cannot set ownership for $path to $uid:$gid: run deploy as root or install/configure sudo." >&2
+    exit 1
+  fi
+}
+
+# These UIDs/GIDs are defined by the pinned runtime images in compose.yml.
+ensure_path_owner "$REDPANDA_DATA_PATH" 101 101
+ensure_path_owner "$TELEMETRY_DATA_PATH" 10001 0
+
 case "$(node -p 'process.versions.node.split(`.`)[0]' 2>/dev/null || true)" in
   22) ;;
   *)
