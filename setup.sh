@@ -221,6 +221,7 @@ export SSL_CERTIFICATE_KEY=${SSL_CERTIFICATE_KEY:-/apps/certs/your-domain.com/pr
 export DOCKER_NAME=${DOCKER_NAME:-Huly}
 export TITLE=${TITLE:-Huly}
 export DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-vi}
+export LANGUAGE=${LANGUAGE:-vi}
 export LAST_NAME_FIRST=${LAST_NAME_FIRST:-true}
 export HULY_GIT_REPOSITORY=${HULY_GIT_REPOSITORY:-https://github.com/mizhtech/huly-platform.git}
 export HULY_GIT_BRANCH=${HULY_GIT_BRANCH:-dev-v0.7.426}

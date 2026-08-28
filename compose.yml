@@ -152,6 +152,7 @@ services:
       - SERVER_SECRET=${SECRET}
       - ADMIN_EMAILS=${PLATFORM_ADMIN_EMAILS}
       - DISABLE_SIGNUP=${DISABLE_SIGNUP:-true}
+      - LANGUAGE=${LANGUAGE:-vi}
       - WORKSPACE_LIMIT_PER_USER=10000
       - DB_URL=${CR_DB_URL}
       - REGION_INFO=cockroach|CockroachDB
