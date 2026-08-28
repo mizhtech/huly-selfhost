@@ -32,15 +32,15 @@ set +a
 : "${GATEWAY_CONTAINER:?GATEWAY_CONTAINER is required}"
 : "${GATEWAY_CONFIG_DIR:?GATEWAY_CONFIG_DIR is required}"
 
-CR_DATA_VOLUME_NAME="${CR_DATA_VOLUME_NAME:-huly_cr_data}"
-CR_CERTS_VOLUME_NAME="${CR_CERTS_VOLUME_NAME:-huly_cr_certs}"
-REDPANDA_VOLUME_NAME="${REDPANDA_VOLUME_NAME:-huly_redpanda}"
-TELEMETRY_VOLUME_NAME="${TELEMETRY_VOLUME_NAME:-huly_telemetry}"
+CR_DATA_PATH="${CR_DATA_PATH:-/workspace/apps/huly/data/cockroach}"
+CR_CERTS_PATH="${CR_CERTS_PATH:-/workspace/apps/huly/data/cockroach-certs}"
+REDPANDA_DATA_PATH="${REDPANDA_DATA_PATH:-/workspace/apps/huly/data/redpanda}"
+TELEMETRY_DATA_PATH="${TELEMETRY_DATA_PATH:-/workspace/apps/huly/data/telemetry}"
 
-export CR_DATA_VOLUME_NAME
-export CR_CERTS_VOLUME_NAME
-export REDPANDA_VOLUME_NAME
-export TELEMETRY_VOLUME_NAME
+export CR_DATA_PATH
+export CR_CERTS_PATH
+export REDPANDA_DATA_PATH
+export TELEMETRY_DATA_PATH
 
 if ! docker network inspect "$EXTERNAL_MINIO_NETWORK" >/dev/null 2>&1; then
   echo "External MinIO Docker network not found: $EXTERNAL_MINIO_NETWORK" >&2
@@ -52,15 +52,16 @@ if ! docker network inspect "$GATEWAY_NETWORK" >/dev/null 2>&1; then
   exit 1
 fi
 
-for volume in \
-  "$CR_DATA_VOLUME_NAME" \
-  "$CR_CERTS_VOLUME_NAME" \
-  "$REDPANDA_VOLUME_NAME" \
-  "$TELEMETRY_VOLUME_NAME"; do
-  if ! docker volume inspect "$volume" >/dev/null 2>&1; then
-    echo "Creating protected external volume: $volume"
-    docker volume create "$volume" >/dev/null
+for path in \
+  "$CR_DATA_PATH" \
+  "$CR_CERTS_PATH" \
+  "$REDPANDA_DATA_PATH" \
+  "$TELEMETRY_DATA_PATH"; do
+  if [[ "$path" != /* ]]; then
+    echo "Persistent data path must be absolute: $path" >&2
+    exit 1
   fi
+  mkdir -p "$path"
 done
 
 case "$(node -p 'process.versions.node.split(`.`)[0]' 2>/dev/null || true)" in

@@ -38,8 +38,8 @@ services:
       - COCKROACH_USER=${CR_USERNAME}
       - COCKROACH_PASSWORD=${CR_USER_PASSWORD}
     volumes:
-      - cr_data:/cockroach/cockroach-data
-      - cr_certs:/cockroach/certs
+      - ${CR_DATA_PATH:-/workspace/apps/huly/data/cockroach}:/cockroach/cockroach-data
+      - ${CR_CERTS_PATH:-/workspace/apps/huly/data/cockroach-certs}:/cockroach/certs
     restart: unless-stopped
     networks:
       - huly_net
@@ -69,7 +69,7 @@ services:
       - --memory
       - 512M
     volumes:
-      - redpanda:/var/lib/redpanda/data
+      - ${REDPANDA_DATA_PATH:-/workspace/apps/huly/data/redpanda}:/var/lib/redpanda/data
     healthcheck:
       test: ["CMD", "rpk", "cluster", "info"]
       interval: 10s
@@ -93,7 +93,7 @@ services:
   jaeger:
     image: jaegertracing/all-in-one:latest
     volumes:
-      - telemetry:/badger
+      - ${TELEMETRY_DATA_PATH:-/workspace/apps/huly/data/telemetry}:/badger
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - SPAN_STORAGE_TYPE=badger
@@ -358,19 +358,6 @@ services:
         condition: service_started
 
 
-volumes:
-  cr_data:
-    external: true
-    name: ${CR_DATA_VOLUME_NAME:-huly_cr_data}
-  cr_certs:
-    external: true
-    name: ${CR_CERTS_VOLUME_NAME:-huly_cr_certs}
-  redpanda:
-    external: true
-    name: ${REDPANDA_VOLUME_NAME:-huly_redpanda}
-  telemetry:
-    external: true
-    name: ${TELEMETRY_VOLUME_NAME:-huly_telemetry}
 
 networks:
   huly_net:
