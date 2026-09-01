@@ -23,6 +23,7 @@ services:
       - hulylake
       - export
       - stream
+      - print
     restart: unless-stopped
     networks:
       huly_net:
@@ -235,7 +236,7 @@ services:
       - CALENDAR_URL=http://127.0.0.1:8095
       - TELEGRAM_URL=http://127.0.0.1:8086
       - GITHUB_URL=http://127.0.0.1:3500
-      - PRINT_URL=http://127.0.0.1:4005
+      - PRINT_URL=http${SECURE:+s}://${HOST_ADDRESS}/_print
       - SIGN_URL=http://127.0.0.1:4006
       - PAYMENT_URL=http://127.0.0.1:3040
       - BACKUP_URL=http://127.0.0.1:4039/api/backup
@@ -320,6 +321,26 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
     depends_on:
       - account
+
+  print:
+    <<: *huly-service
+    image: hardcoreeng/print
+    environment:
+      - SECRET=${SECRET}
+      - REGION=cockroach
+      - QUEUE_CONFIG=redpanda:9092
+      - STORAGE_CONFIG=datalake|http://datalake:4030
+      - ACCOUNTS_URL=http://account:3000
+      - FRONT_URL=http${SECURE:+s}://${HOST_ADDRESS}
+      - ALLOWED_HOSTNAMES=${HOST_ADDRESS}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
+    depends_on:
+      account:
+        condition: service_started
+      redpanda:
+        condition: service_healthy
+      datalake:
+        condition: service_started
 
   export:
     <<: *huly-service

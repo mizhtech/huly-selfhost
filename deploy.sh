@@ -121,8 +121,9 @@ echo "Building Huly fork from $(git -C "$SOURCE_DIR" rev-parse --short HEAD)"
   cd "$SOURCE_DIR"
   node common/scripts/install-run-rush.js update
   node common/scripts/install-run-rush.js docker:min
-  # The minified build excludes pod-mail; this deployment enables outbound SMTP.
+  # The minified build excludes pod-mail and pod-print; this deployment enables both.
   node common/scripts/install-run-rush.js docker:build --to @hcengineering/pod-mail
+  node common/scripts/install-run-rush.js docker:build --to @hcengineering/pod-print
 )
 
 # Application images must come from the local fork build. Do not pull hardcoreeng/*
