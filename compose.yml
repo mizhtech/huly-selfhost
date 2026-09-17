@@ -26,10 +26,7 @@ services:
       - print
     restart: unless-stopped
     networks:
-      huly_net:
-      gateway_net:
-        aliases:
-          - huly-gateway
+      - huly_net
 
   cockroach:
     image: cockroachdb/cockroach:latest-v24.3
@@ -423,6 +420,3 @@ services:
 
 networks:
   huly_net:
-  gateway_net:
-    external: true
-    name: ${GATEWAY_NETWORK}

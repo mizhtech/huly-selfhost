@@ -31,9 +31,6 @@ set +a
 : "${MINIO_IMAGE:?MINIO_IMAGE is required}"
 : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}"
 : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}"
-: "${GATEWAY_NETWORK:?GATEWAY_NETWORK is required}"
-: "${GATEWAY_CONTAINER:?GATEWAY_CONTAINER is required}"
-: "${GATEWAY_CONFIG_DIR:?GATEWAY_CONFIG_DIR is required}"
 
 CR_DATA_PATH="${CR_DATA_PATH:-/workspace/apps/huly/data/cockroach}"
 CR_CERTS_PATH="${CR_CERTS_PATH:-/workspace/apps/huly/data/cockroach-certs}"
@@ -47,11 +44,6 @@ export REDPANDA_DATA_PATH
 export TELEMETRY_DATA_PATH
 export MINIO_DATA_PATH
 
-
-if ! docker network inspect "$GATEWAY_NETWORK" >/dev/null 2>&1; then
-  echo "Central gateway Docker network not found: $GATEWAY_NETWORK" >&2
-  exit 1
-fi
 
 for path in \
   "$CR_DATA_PATH" \
@@ -128,7 +120,7 @@ echo "Building Huly fork from $(git -C "$SOURCE_DIR" rev-parse --short HEAD)"
 docker compose --env-file "$CONFIG_FILE" -f compose.yml config >/dev/null
 docker compose --env-file "$CONFIG_FILE" -f compose.yml up -d --force-recreate
 
-./nginx.sh
-
 echo "Huly started on http://${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}"
-echo "Public URL: http${SECURE:+s}://${HOST_ADDRESS}"
+if [[ -n "${SECURE:-}" ]]; then
+  echo "Configure host Nginx to proxy https://${HOST_ADDRESS} to http://127.0.0.1:${HTTP_PORT:-8087} (see ./nginx.sh)."
+fi

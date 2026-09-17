@@ -1016,13 +1016,13 @@ HTTP_PORT=8087
 
 Docker publishes only the internal Huly gateway to `127.0.0.1:8087`. Host Nginx terminates TLS for `https://erp.qtmienbac.vn` and proxies to that loopback endpoint.
 
-Generate/update the host Nginx configuration with:
+Generate a host Nginx vhost with:
 
 ```bash
-./nginx.sh --recreate
+./nginx.sh > huly-host.conf
 ```
 
-Add the SSL certificate directives required by your server before reloading Nginx.
+Review the generated file, install it into your host Nginx configuration directory, then run `nginx -t` and reload host Nginx. `./deploy.sh` no longer configures or reloads an external gateway. The gateway container cannot reach the loopback-only `127.0.0.1:8087` port; use host Nginx for the production URL.
 
 ### Stack-local MinIO
 
