@@ -28,11 +28,9 @@ set +a
 : "${SMTP_PORT:?SMTP_PORT is required}"
 : "${SMTP_USERNAME:?SMTP_USERNAME is required}"
 : "${SMTP_PASSWORD:?SMTP_PASSWORD is required}"
-: "${EXTERNAL_MINIO_NETWORK:?EXTERNAL_MINIO_NETWORK is required}"
-: "${EXTERNAL_MINIO_ENDPOINT:?EXTERNAL_MINIO_ENDPOINT is required}"
-: "${EXTERNAL_MINIO_URL:?EXTERNAL_MINIO_URL is required}"
-: "${EXTERNAL_MINIO_ACCESS_KEY:?EXTERNAL_MINIO_ACCESS_KEY is required}"
-: "${EXTERNAL_MINIO_SECRET_KEY:?EXTERNAL_MINIO_SECRET_KEY is required}"
+: "${MINIO_IMAGE:?MINIO_IMAGE is required}"
+: "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}"
+: "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}"
 : "${GATEWAY_NETWORK:?GATEWAY_NETWORK is required}"
 : "${GATEWAY_CONTAINER:?GATEWAY_CONTAINER is required}"
 : "${GATEWAY_CONFIG_DIR:?GATEWAY_CONFIG_DIR is required}"
@@ -41,16 +39,14 @@ CR_DATA_PATH="${CR_DATA_PATH:-/workspace/apps/huly/data/cockroach}"
 CR_CERTS_PATH="${CR_CERTS_PATH:-/workspace/apps/huly/data/cockroach-certs}"
 REDPANDA_DATA_PATH="${REDPANDA_DATA_PATH:-/workspace/apps/huly/data/redpanda}"
 TELEMETRY_DATA_PATH="${TELEMETRY_DATA_PATH:-/workspace/apps/huly/data/telemetry}"
+MINIO_DATA_PATH="${MINIO_DATA_PATH:-/workspace/apps/huly/data/minio}"
 
 export CR_DATA_PATH
 export CR_CERTS_PATH
 export REDPANDA_DATA_PATH
 export TELEMETRY_DATA_PATH
+export MINIO_DATA_PATH
 
-if ! docker network inspect "$EXTERNAL_MINIO_NETWORK" >/dev/null 2>&1; then
-  echo "External MinIO Docker network not found: $EXTERNAL_MINIO_NETWORK" >&2
-  exit 1
-fi
 
 if ! docker network inspect "$GATEWAY_NETWORK" >/dev/null 2>&1; then
   echo "Central gateway Docker network not found: $GATEWAY_NETWORK" >&2
@@ -61,7 +57,8 @@ for path in \
   "$CR_DATA_PATH" \
   "$CR_CERTS_PATH" \
   "$REDPANDA_DATA_PATH" \
-  "$TELEMETRY_DATA_PATH"; do
+  "$TELEMETRY_DATA_PATH" \
+  "$MINIO_DATA_PATH"; do
   if [[ "$path" != /* ]]; then
     echo "Persistent data path must be absolute: $path" >&2
     exit 1

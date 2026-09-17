@@ -143,11 +143,5 @@ if [ "$UPGRADE" == true ]; then
     echo -e "\033[1;32mUpgrade finished.\033[0m"
 fi
 
-# This deployment uses minio for blob storage; the tool's backup-restore writes
-# blobs there directly. A blobs/blobs.json manifest means the backup was taken
-# from a datalake-based deployment and contains extra blobs that must be
-# uploaded separately - not supported here.
-if [ -f "$BACKUP_ABS/blobs/blobs.json" ]; then
-    echo -e "\n\033[1;33mWarning: $BACKUP_ABS/blobs/blobs.json found (extra datalake blobs).\033[0m"
-    echo -e "\033[1;33mThis stack has no datalake service; these blobs were NOT uploaded.\033[0m"
-fi
+# Blob restore uses the same datalake storage contract as the running stack.
+# The datalake service persists objects in the stack-local MinIO backend.

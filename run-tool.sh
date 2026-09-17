@@ -30,7 +30,7 @@ source "$CONFIG_FILE"
 NETWORK="${DOCKER_NAME}_huly_net"
 
 # Matches the STORAGE_CONFIG hardcoded for every service in compose.yml
-STORAGE_CONFIG="minio|minio?accessKey=minioadmin&secretKey=minioadmin"
+STORAGE_CONFIG="datalake|http://datalake:4030"
 
 if ! docker network inspect "$NETWORK" >/dev/null 2>&1; then
     echo -e "\033[1;31mNetwork $NETWORK not found. Start the stack first: docker compose up -d\033[0m"

@@ -975,10 +975,10 @@ This repository is configured to deploy the customized Huly Platform fork on Ubu
 The production compose file mirrors the active service profile of:
 
 ```bash
-rush docker:up:min:external-minio
+rush docker:up:min
 ```
 
-Optional services disabled by the minified profile (Elasticsearch/fulltext, stats, print, sign, HulyPulse, process, backup API, rating, and related services) are not started. Object storage is provided by an existing external MinIO instance.
+Optional services disabled by the minified profile (Elasticsearch/fulltext, stats, sign, HulyPulse, process, backup API, rating, and related services) are not started. This deployment additionally enables mail and print, and runs its own MinIO service for object storage.
 
 ### Source and build
 
@@ -1024,20 +1024,136 @@ Generate/update the host Nginx configuration with:
 
 Add the SSL certificate directives required by your server before reloading Nginx.
 
-### External MinIO
+### Stack-local MinIO
 
-Set these values in `huly_v7.conf`:
+The production stack runs its own MinIO service. Huly containers always use the Docker-internal endpoint `http://minio:9000`; the host mappings are only for administration/debugging and avoid conflicting with an existing host MinIO on ports 9000/9001.
+
+Set or keep these values in `huly_v7.conf`:
 
 ```text
-EXTERNAL_MINIO_ENDPOINT=minio.internal:9000
-EXTERNAL_MINIO_URL=http://minio.internal:9000
-EXTERNAL_MINIO_ACCESS_KEY=...
-EXTERNAL_MINIO_SECRET_KEY=...
-EXTERNAL_MINIO_REGION=local
+MINIO_IMAGE=huly-minio:RELEASE.2025-10-15T17-29-55Z
+MINIO_ACCESS_KEY=huly
+MINIO_SECRET_KEY=...
+MINIO_REGION=local
+MINIO_API_BIND=127.0.0.1
+MINIO_API_PORT=19000
+MINIO_CONSOLE_BIND=127.0.0.1
+MINIO_CONSOLE_PORT=19001
+MINIO_DATA_PATH=/workspace/apps/huly/data/minio
 BACKUP_BUCKET_NAME=huly-backups
 ```
 
-`EXTERNAL_MINIO_URL` must be reachable from containers on the Huly Docker network. Prefer an internal DNS name or stable private address on Ubuntu rather than a public Internet endpoint.
+The API is available on host port `19000` and the console on `19001`. Keep the default loopback binds unless remote administration is explicitly required. MinIO data is persisted at `MINIO_DATA_PATH` and must be included in the production backup plan.
+
+`MINIO_IMAGE` is intentionally explicit so production deployments do not move to a different MinIO release on the next pull. The pinned `RELEASE.2025-10-15T17-29-55Z` contains the MinIO privilege-escalation security fix. MinIO Community Edition is source-only for this release, so build the image from the upstream release tag and keep the resulting image in a registry you control:
+
+```bash
+git clone https://github.com/minio/minio.git /tmp/minio
+cd /tmp/minio
+git checkout RELEASE.2025-10-15T17-29-55Z
+TAG=huly-minio:RELEASE.2025-10-15T17-29-55Z make docker
+docker image inspect huly-minio:RELEASE.2025-10-15T17-29-55Z >/dev/null
+```
+
+For multi-node or repeatable production deployments, push the tested image to a private registry and set `MINIO_IMAGE` to that immutable tag (preferably a digest). Do not fall back to `minio/minio:latest` or the older `RELEASE.2025-09-07T16-13-09Z` image.
+
+#### Migrating an existing external MinIO
+
+Do not switch an existing database to an empty stack-local MinIO. Database records reference objects already stored in the external MinIO, so migrate the objects before recreating the Huly services. Keep the old MinIO credentials available outside the repository for the duration of the cutover.
+
+A safe cutover is:
+
+1. Back up the database and the existing external MinIO. Also back up the current selfhost configuration before changing it:
+
+   ```bash
+   cp -a huly_v7.conf "huly_v7.conf.before-local-minio.$(date +%Y%m%d%H%M%S)"
+   ```
+
+2. Prepare the new MinIO configuration **without rerunning `setup.sh` on an existing production installation**. First build/pull the tested `MINIO_IMAGE` described above. Then create a dedicated secret if it does not already exist:
+
+   ```bash
+   if [ ! -f .minio.secret ]; then
+     (umask 077 && openssl rand -hex 32 > .minio.secret)
+   fi
+   chmod 600 .minio.secret
+   ```
+
+   Add the following values to the existing `huly_v7.conf` (preserve all unrelated existing settings):
+
+   ```text
+   MINIO_IMAGE=huly-minio:RELEASE.2025-10-15T17-29-55Z
+   MINIO_ACCESS_KEY=huly
+   MINIO_SECRET_KEY=<contents of .minio.secret>
+   MINIO_REGION=local
+   MINIO_API_BIND=127.0.0.1
+   MINIO_API_PORT=19000
+   MINIO_CONSOLE_BIND=127.0.0.1
+   MINIO_CONSOLE_PORT=19001
+   MINIO_DATA_PATH=/workspace/apps/huly/data/minio
+   BACKUP_BUCKET_NAME=huly-backups
+   ```
+
+   Load the deployment configuration into the current shell, then provide the old external MinIO credentials as temporary shell variables. Do not store the old credentials in the repository:
+
+   ```bash
+   set -a
+   . ./huly_v7.conf
+   set +a
+
+   export OLD_MINIO_URL='https://old-minio.example.com'
+   export OLD_MINIO_ACCESS_KEY='...'
+   export OLD_MINIO_SECRET_KEY='...'
+   ```
+
+   Run a preflight before starting the new MinIO:
+
+   ```bash
+   : "${MINIO_IMAGE:?MINIO_IMAGE is required}"
+   : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}"
+   : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}"
+   : "${OLD_MINIO_URL:?OLD_MINIO_URL is required}"
+   : "${OLD_MINIO_ACCESS_KEY:?OLD_MINIO_ACCESS_KEY is required}"
+   : "${OLD_MINIO_SECRET_KEY:?OLD_MINIO_SECRET_KEY is required}"
+   docker image inspect "$MINIO_IMAGE" >/dev/null
+   ```
+
+3. Start only the new stack-local MinIO without recreating the running Huly services:
+
+   ```bash
+   docker compose up -d minio
+   docker compose ps minio
+   ```
+
+4. Configure MinIO Client (`mc`) aliases for the old and new endpoints. The new endpoint is bound to loopback by default:
+
+   ```bash
+   mc alias set huly-old "$OLD_MINIO_URL" "$OLD_MINIO_ACCESS_KEY" "$OLD_MINIO_SECRET_KEY"
+   mc alias set huly-new "http://127.0.0.1:${MINIO_API_PORT:-19000}" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+   ```
+
+5. Inventory the old buckets and perform an initial mirror while Huly is still online:
+
+   ```bash
+   mc ls huly-old
+   mc mirror --overwrite huly-old/blobs huly-new/blobs
+   ```
+
+   Mirror every Huly bucket reported by the inventory. Include `BACKUP_BUCKET_NAME` only if existing backup objects must also be retained.
+
+6. Verify bucket/object counts and sizes on both endpoints. Do not proceed while the inventories differ unexpectedly.
+7. Stop Huly writers for the cutover, leaving both MinIO instances available, then run a final mirror to capture objects written after the initial copy:
+
+   ```bash
+   docker compose stop front account transactor workspace collaborator datalake hulylake stream print
+   mc mirror --overwrite huly-old/blobs huly-new/blobs
+   ```
+
+   Repeat the final mirror for every migrated Huly bucket.
+
+8. Verify the final inventories again, then run the normal deployment so all services start with the stack-local storage configuration.
+9. Before retiring the external MinIO, verify existing attachments/avatars, a new upload, PDF printing, and backup/restore. Keep the old storage intact until these checks pass.
+
+For a clean installation with a new database and no existing objects, this migration procedure is not required.
 
 ### Deploy
 

@@ -104,6 +104,26 @@ services:
     networks:
       - huly_net
 
+  minio:
+    image: ${MINIO_IMAGE}
+    command: server /data --address ":9000" --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "${MINIO_API_BIND:-127.0.0.1}:${MINIO_API_PORT:-19000}:9000"
+      - "${MINIO_CONSOLE_BIND:-127.0.0.1}:${MINIO_CONSOLE_PORT:-19001}:9001"
+    volumes:
+      - ${MINIO_DATA_PATH:-/workspace/apps/huly/data/minio}:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - huly_net
+
   stream:
     <<: *huly-service
     image: hardcoreeng/stream
@@ -113,8 +133,8 @@ services:
       - STREAM_SERVER_SECRET=${SECRET}
       - STREAM_MAX_PARALLEL_SCALING_COUNT=6
       - STREAM_LOG_LEVEL=info
-      - AWS_ACCESS_KEY_ID=${EXTERNAL_MINIO_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${EXTERNAL_MINIO_SECRET_KEY}
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_KEY}
       - STREAM_REGION=cockroach
       - STREAM_QUEUE_CONFIG=redpanda:9092
     depends_on:
@@ -175,9 +195,6 @@ services:
 
   workspace:
     <<: *huly-service
-    networks:
-      - huly_net
-      - external_minio_net
     image: hardcoreeng/workspace
     environment:
       - WS_OPERATION=all+backup
@@ -189,9 +206,9 @@ services:
       - ACCOUNTS_URL=http://account:3000
       - ACCOUNTS_DB_URL=${CR_DB_URL}
       - BACKUP_STORAGE_KIND=minio
-      - BACKUP_STORAGE_ENDPOINT=${EXTERNAL_MINIO_ENDPOINT}
-      - BACKUP_STORAGE_ACCESS_KEY=${EXTERNAL_MINIO_ACCESS_KEY}
-      - BACKUP_STORAGE_SECRET_KEY=${EXTERNAL_MINIO_SECRET_KEY}
+      - BACKUP_STORAGE_ENDPOINT=minio:9000
+      - BACKUP_STORAGE_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - BACKUP_STORAGE_SECRET_KEY=${MINIO_SECRET_KEY}
       - BACKUP_BUCKET=${BACKUP_BUCKET_NAME:-huly-backups}
       - MAIL_URL=
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
@@ -204,6 +221,8 @@ services:
         condition: service_started
       datalake:
         condition: service_started
+      minio:
+        condition: service_healthy
 
   collaborator:
     <<: *huly-service
@@ -359,9 +378,6 @@ services:
 
   datalake:
     <<: *huly-service
-    networks:
-      - huly_net
-      - external_minio_net
     image: hardcoreeng/datalake
     environment:
       - PORT=4030
@@ -370,10 +386,10 @@ services:
       - DB_URL=${CR_DB_URL}
       - BUCKET_NAME=blobs
       - BUCKET_LOCATION=eu
-      - BUCKET_ENDPOINT=${EXTERNAL_MINIO_URL}
-      - BUCKET_ACCESS_KEY=${EXTERNAL_MINIO_ACCESS_KEY}
-      - BUCKET_SECRET_KEY=${EXTERNAL_MINIO_SECRET_KEY}
-      - BUCKET_REGION=${EXTERNAL_MINIO_REGION:-local}
+      - BUCKET_ENDPOINT=http://minio:9000
+      - BUCKET_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - BUCKET_SECRET_KEY=${MINIO_SECRET_KEY}
+      - BUCKET_REGION=${MINIO_REGION:-local}
       - REGION=cockroach
       - QUEUE_CONFIG=redpanda:9092
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318/v1/traces
@@ -384,31 +400,29 @@ services:
         condition: service_healthy
       account:
         condition: service_started
+      minio:
+        condition: service_healthy
 
   hulylake:
     <<: *huly-service
-    networks:
-      - huly_net
-      - external_minio_net
     image: hardcoreeng/hulylake
     environment:
       - HULY_TOKEN_SECRET=${SECRET}
       - HULY_DB_CONNECTION=${CR_DB_URL}
-      - AWS_ENDPOINT_URL=${EXTERNAL_MINIO_URL}
-      - AWS_REGION=${EXTERNAL_MINIO_REGION:-local}
-      - AWS_ACCESS_KEY_ID=${EXTERNAL_MINIO_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${EXTERNAL_MINIO_SECRET_KEY}
+      - AWS_ENDPOINT_URL=http://minio:9000
+      - AWS_REGION=${MINIO_REGION:-local}
+      - AWS_ACCESS_KEY_ID=${MINIO_ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_SECRET_KEY}
     depends_on:
       cockroach:
         condition: service_started
+      minio:
+        condition: service_healthy
 
 
 
 networks:
   huly_net:
-  external_minio_net:
-    external: true
-    name: ${EXTERNAL_MINIO_NETWORK}
   gateway_net:
     external: true
     name: ${GATEWAY_NETWORK}

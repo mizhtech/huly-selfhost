@@ -212,6 +212,12 @@ if [ ! -f .rp.secret ]; then
   echo "Secret generated and stored in .rp.secret"
 fi
 
+if [ ! -f .minio.secret ]; then
+  (umask 077 && openssl rand -hex 32 > .minio.secret)
+  echo "Secret generated and stored in .minio.secret"
+fi
+chmod 600 .minio.secret
+
 export HOST_ADDRESS=$_HOST_ADDRESS
 export SECURE=$_SECURE
 export HTTP_PORT=$_HTTP_PORT
@@ -233,12 +239,14 @@ export SMTP_HOST=${SMTP_HOST:-}
 export SMTP_PORT=${SMTP_PORT:-587}
 export SMTP_USERNAME=${SMTP_USERNAME:-}
 export SMTP_PASSWORD=${SMTP_PASSWORD:-}
-export EXTERNAL_MINIO_NETWORK=${EXTERNAL_MINIO_NETWORK:-}
-export EXTERNAL_MINIO_ENDPOINT=${EXTERNAL_MINIO_ENDPOINT:-}
-export EXTERNAL_MINIO_URL=${EXTERNAL_MINIO_URL:-}
-export EXTERNAL_MINIO_ACCESS_KEY=${EXTERNAL_MINIO_ACCESS_KEY:-}
-export EXTERNAL_MINIO_SECRET_KEY=${EXTERNAL_MINIO_SECRET_KEY:-}
-export EXTERNAL_MINIO_REGION=${EXTERNAL_MINIO_REGION:-local}
+export MINIO_IMAGE=${MINIO_IMAGE:-huly-minio:RELEASE.2025-10-15T17-29-55Z}
+export MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-huly}
+export MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-$(cat .minio.secret)}
+export MINIO_REGION=${MINIO_REGION:-local}
+export MINIO_API_BIND=${MINIO_API_BIND:-127.0.0.1}
+export MINIO_API_PORT=${MINIO_API_PORT:-19000}
+export MINIO_CONSOLE_BIND=${MINIO_CONSOLE_BIND:-127.0.0.1}
+export MINIO_CONSOLE_PORT=${MINIO_CONSOLE_PORT:-19001}
 export BACKUP_BUCKET_NAME=${BACKUP_BUCKET_NAME:-huly-backups}
 export CR_DATABASE=${CR_DATABASE:-defaultdb}
 export CR_USERNAME=${CR_USERNAME:-selfhost}
@@ -252,6 +260,7 @@ export CR_DATA_PATH=${CR_DATA_PATH:-/workspace/apps/huly/data/cockroach}
 export CR_CERTS_PATH=${CR_CERTS_PATH:-/workspace/apps/huly/data/cockroach-certs}
 export REDPANDA_DATA_PATH=${REDPANDA_DATA_PATH:-/workspace/apps/huly/data/redpanda}
 export TELEMETRY_DATA_PATH=${TELEMETRY_DATA_PATH:-/workspace/apps/huly/data/telemetry}
+export MINIO_DATA_PATH=${MINIO_DATA_PATH:-/workspace/apps/huly/data/minio}
 export HULY_SECRET=$(cat .huly.secret)
 export COCKROACH_SECRET=$(cat .cr.secret)
 export REDPANDA_SECRET=$(cat .rp.secret)
