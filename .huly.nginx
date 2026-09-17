@@ -1,6 +1,8 @@
 server {
-    listen 80;
-    server_name _;
+    listen 443 ssl;
+    server_name ${HOST_ADDRESS};
+    ssl_certificate /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
     client_max_body_size 100M;
 
     # Huly UI branding is fetched from /branding.json.

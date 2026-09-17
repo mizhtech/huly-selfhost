@@ -112,6 +112,8 @@ Afterwards perform [post-installation steps](https://docs.docker.com/engine/inst
 
 ## Clone the `huly-selfhost` repository and configure `nginx`
 
+> The instructions in this section describe the legacy host-Nginx HTTP proxy setup. For the production SNI-passthrough deployment, use [Production URL and Nginx](#production-url-and-nginx) instead; do not run `./nginx.sh` or install its HTTP proxy vhost.
+
 Next, let's clone the `huly-selfhost` repository and configure Huly.
 
 ```bash
@@ -1008,21 +1010,30 @@ The compose file uses `pull_policy: never` for `hardcoreeng/*` services, so a mi
 Default production values are:
 
 ```text
-HOST_ADDRESS=erp.qtmienbac.vn
+HOST_ADDRESS=yourdomain.com
 SECURE=true
 HTTP_BIND=127.0.0.1
 HTTP_PORT=8087
 ```
 
-Docker publishes only the internal Huly gateway to `127.0.0.1:8087`. Host Nginx terminates TLS for `https://erp.qtmienbac.vn` and proxies to that loopback endpoint.
+Docker publishes Huly's TLS listener at `127.0.0.1:8087 -> nginx:443`. The Huly Nginx container terminates TLS using the certificate and key specified by `SSL_CERTIFICATE` and `SSL_CERTIFICATE_KEY` (host paths mounted read-only). For production, both files must exist on the Docker host, and the certificate must cover `HOST_ADDRESS`. The official Nginx entrypoint renders `.huly.nginx` as a template at startup, substituting only `HOST_ADDRESS` from `huly_v7.conf` while preserving Nginx variables such as `$host` and `$scheme`.
 
-Generate a host Nginx vhost with:
+Host Nginx uses `stream` with `ssl_preread` to forward TCP connections for SNI `erp.yourdoamain.com` to `127.0.0.1:8087`; other SNI values can continue to the existing QTA TLS endpoint. Do not configure an HTTP `proxy_pass` to port 8087, and do not use `./nginx.sh` for this passthrough topology. The host stream configuration is managed separately and is not changed by `./deploy.sh`.
+
+On an existing installation, update `SSL_CERTIFICATE` and `SSL_CERTIFICATE_KEY` in the generated `huly_v7.conf` to the actual host paths, then recreate only the Huly Nginx container after applying this Compose change:
 
 ```bash
-./nginx.sh > huly-host.conf
+docker compose --env-file huly_v7.conf -f compose.yml up -d --no-deps --force-recreate nginx
 ```
 
-Review the generated file, install it into your host Nginx configuration directory, then run `nginx -t` and reload host Nginx. `./deploy.sh` no longer configures or reloads an external gateway. The gateway container cannot reach the loopback-only `127.0.0.1:8087` port; use host Nginx for the production URL.
+After deployment, verify TLS directly before testing public ingress:
+
+```bash
+docker ps --filter name=huly-nginx-1 --format '{{.Names}} {{.Ports}}'
+docker exec huly-nginx-1 nginx -T 2>&1 | grep -E 'listen 443 ssl|server_name yourdomain.com'
+curl -Iv --resolve yourdomain.com:8087:127.0.0.1 https://yourdomain.com:8087/
+curl -Iv https://yourdomain.com/
+```
 
 ### Stack-local MinIO
 

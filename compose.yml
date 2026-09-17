@@ -9,10 +9,26 @@ x-huly-service: &huly-service
 services:
   nginx:
     image: nginx:1.27-alpine
+    environment:
+      HOST_ADDRESS: ${HOST_ADDRESS}
+      # Preserve Nginx variables ($host, $scheme, etc.) in the template.
+      NGINX_ENVSUBST_FILTER: ^HOST_ADDRESS
     ports:
-      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}:80"
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}:443"
     volumes:
-      - ./.huly.nginx:/etc/nginx/conf.d/default.conf:ro
+      - ./.huly.nginx:/etc/nginx/templates/default.conf.template:ro
+      - type: bind
+        source: ${SSL_CERTIFICATE}
+        target: /etc/nginx/certs/fullchain.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${SSL_CERTIFICATE_KEY}
+        target: /etc/nginx/certs/privkey.pem
+        read_only: true
+        bind:
+          create_host_path: false
     depends_on:
       - front
       - account

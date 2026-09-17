@@ -31,6 +31,15 @@ set +a
 : "${MINIO_IMAGE:?MINIO_IMAGE is required}"
 : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}"
 : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}"
+: "${SSL_CERTIFICATE:?SSL_CERTIFICATE is required}"
+: "${SSL_CERTIFICATE_KEY:?SSL_CERTIFICATE_KEY is required}"
+
+for certificate_file in "$SSL_CERTIFICATE" "$SSL_CERTIFICATE_KEY"; do
+  if [[ ! -f "$certificate_file" ]]; then
+    echo "TLS certificate file not found: $certificate_file" >&2
+    exit 1
+  fi
+done
 
 CR_DATA_PATH="${CR_DATA_PATH:-/workspace/apps/huly/data/cockroach}"
 CR_CERTS_PATH="${CR_CERTS_PATH:-/workspace/apps/huly/data/cockroach-certs}"
@@ -120,7 +129,5 @@ echo "Building Huly fork from $(git -C "$SOURCE_DIR" rev-parse --short HEAD)"
 docker compose --env-file "$CONFIG_FILE" -f compose.yml config >/dev/null
 docker compose --env-file "$CONFIG_FILE" -f compose.yml up -d --force-recreate
 
-echo "Huly started on http://${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087}"
-if [[ -n "${SECURE:-}" ]]; then
-  echo "Configure host Nginx to proxy https://${HOST_ADDRESS} to http://127.0.0.1:${HTTP_PORT:-8087} (see ./nginx.sh)."
-fi
+echo "Huly TLS endpoint: https://${HOST_ADDRESS}:${HTTP_PORT:-8087} (${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8087} -> container :443)"
+echo "Public HTTPS requires host Nginx SNI passthrough to this endpoint."
